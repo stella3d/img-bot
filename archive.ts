@@ -80,31 +80,32 @@ async function getImageDataAndAspect(filePath: string): Promise<LoadedImage> {
 const MAX_SIZE = 976 * 1024;
 async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number): Promise<Buffer> {
     if (buffer.length <= MAX_SIZE) {
-        console.log('image already under size limit, no scaling needed');
+        console.log(`image size - original: ${buffer.length}`);
         return buffer;
     }
 
     let quality = 86;
-    let resizeFactor = 0.875;
+    let resizeFactor = 0.9;
     let output: Buffer;
-    console.log('scaling image, original size:', buffer.length, 'bytes');
+
     while (true) {
         output = await sharp(buffer)
             .resize(Math.floor(width * resizeFactor), Math.floor(height * resizeFactor))
             .jpeg({ quality })
             .toBuffer();
 
-        console.log(`scaled image size: ${output.length} bytes`);
-        
-        if (output.length <= MAX_SIZE) break;
+        if (output.length <= MAX_SIZE) {
+            console.log(`image size - original: ${buffer.length}, scaled: ${output.length} bytes`);
+            break;
+        } 
 
-        if (resizeFactor === 0.875) {
-            resizeFactor = 0.8;
-        } else if (resizeFactor > 0.2) {
-            resizeFactor -= 0.08;
-            quality = 86; // reset quality when further reducing dimensions
+        if (resizeFactor > 0.2) {
+            resizeFactor -= 0.05;
+        } else if (quality > 50){
+            quality -= 4;
         } else {
-            break; // cannot reduce further without compromising too much
+            console.error('image too large, cannot scale further without losing too much quality');
+            break;
         }
     }
     return output;
@@ -222,12 +223,10 @@ export function makeNextIndex(currentIndex: ArchiveIndex, sequence: SequenceMeta
     if (sequence.isLastPageInVolume) {
         nextIndex.page = 0;
         if (sequence.isLastVolumeInSeries) {
-            console.log('last volume in series, moving to next series');
             if (sequence.isLastSeries) 
                 nextIndex.series = 0;
             else 
                 nextIndex.series += 1;
-
             nextIndex.volume = 0;
         } else {
             nextIndex.volume += 1;
