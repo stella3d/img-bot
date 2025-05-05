@@ -40,7 +40,37 @@ async function getImageDataAndAspect(filePath: string): Promise<LoadedImage> {
       throw new Error("failed to retrieve image dimensions");
     }
     const buffer = await image.toBuffer();
-    return { buffer, aspectRatio: { width: metadata.width, height: metadata.height } };
+    // scale image if needed to comply with 976KB limit
+    const scaledBuffer = await scaleImageIfNeeded(buffer, metadata.width, metadata.height);
+    return { buffer: scaledBuffer, aspectRatio: { width: metadata.width, height: metadata.height } };
+}
+
+// New helper to scale images under 976 kilobytes
+const MAX_SIZE = 976 * 1024;
+async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number): Promise<Buffer> {
+    let quality = 90;
+    let resizeFactor = 1;
+    let output: Buffer;
+    while (true) {
+        console.log('scaling image...');
+        output = await sharp(buffer)
+            .resize(Math.floor(width * resizeFactor), Math.floor(height * resizeFactor))
+            .jpeg({ quality })
+            .toBuffer();
+
+        console.log(`scaled image size: ${output.length} bytes`);
+        
+        if (output.length <= MAX_SIZE) break;
+        if (quality > 20) {
+            quality -= 10;
+        } else if (resizeFactor > 0.2) {
+            resizeFactor -= 0.1;
+            quality = 90; // reset quality when further reducing dimensions
+        } else {
+            break; // cannot reduce further without compromising too much
+        }
+    }
+    return output;
 }
 
 async function loadSeriesPaths(): Promise<string[]> {
