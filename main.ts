@@ -19,7 +19,6 @@ async function main() {
   await bot.login({ identifier, password });
 
   const currentIndex = loadArchiveIndex();
-  console.log(`current index: ${JSON.stringify(currentIndex, null, 2)}`);
 
   // Load the image and calculate its aspect ratio
   const { buffer, aspectRatio, meta, sequence } = await loadImageAtIndex(currentIndex);
@@ -42,7 +41,6 @@ async function main() {
 
   // Save the updated index
   const newIndex = makeNextIndex(currentIndex, sequence);
-  console.log(`new index: ${JSON.stringify(newIndex)}`);
   saveArchiveIndex(newIndex);
 }
 

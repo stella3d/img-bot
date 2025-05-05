@@ -84,8 +84,8 @@ async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number)
         return buffer;
     }
 
-    let quality = 90;
-    let resizeFactor = 0.9;
+    let quality = 85;
+    let resizeFactor = 0.875;
     let output: Buffer;
     console.log('scaling image, original size:', buffer.length, 'bytes');
     while (true) {
@@ -97,11 +97,12 @@ async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number)
         console.log(`scaled image size: ${output.length} bytes`);
         
         if (output.length <= MAX_SIZE) break;
-        if (quality > 20) {
-            quality -= 10;
+
+        if (resizeFactor === 0.875) {
+            resizeFactor = 0.8;
         } else if (resizeFactor > 0.2) {
             resizeFactor -= 0.1;
-            quality = 90; // reset quality when further reducing dimensions
+            quality = 85; // reset quality when further reducing dimensions
         } else {
             break; // cannot reduce further without compromising too much
         }
@@ -178,6 +179,7 @@ export async function loadImageAtIndex(index: ArchiveIndex): Promise<LoadedLabel
 
     const seriesPath = seriesPaths[index.series];
     const volumePaths = await loadVolumePaths(seriesPath);
+
     if (index.volume >= volumePaths.length) {
         throw new Error(`volume index ${index.volume} out of bounds for series ${index.series}`);
     }
@@ -185,7 +187,7 @@ export async function loadImageAtIndex(index: ArchiveIndex): Promise<LoadedLabel
     const volumePath = volumePaths[index.volume];
     const imagePaths = await loadImagePaths(volumePath);
     if (index.page >= imagePaths.length) {
-        throw new Error(`page index ${index.page} out of bounds for volume ${index.volume}`);
+        throw new Error(`page index ${index.page} out of bounds for volume ${index.volume}: only ${imagePaths.length} pages`);
     }
 
     const isLastPageInVolume = index.page === imagePaths.length - 1;
@@ -220,6 +222,7 @@ export function makeNextIndex(currentIndex: ArchiveIndex, sequence: SequenceMeta
     if (sequence.isLastPageInVolume) {
         nextIndex.page = 0;
         if (sequence.isLastVolumeInSeries) {
+            console.log('last volume in series, moving to next series');
             if (sequence.isLastSeries) 
                 nextIndex.series = 0;
             else 
