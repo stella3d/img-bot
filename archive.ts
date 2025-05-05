@@ -7,6 +7,30 @@ export type ArchiveIndex = {
     page: number;
 }
 
+
+const CURSOR_PATH = 'archiveCursor.json';
+
+export function loadArchiveIndex(): ArchiveIndex {
+    try {
+        const data = Deno.readTextFileSync(CURSOR_PATH);
+        const index = JSON.parse(data) as ArchiveIndex;
+        return index;
+    } catch (error) {
+        console.error(`failed to load archive index from ${CURSOR_PATH}: ${error}`);
+        Deno.exit(1);
+    }
+}
+
+export function saveArchiveIndex(index: ArchiveIndex): void {
+    try {
+        const data = JSON.stringify(index, null, 2);
+        Deno.writeTextFileSync(CURSOR_PATH, data);
+    } catch (error) {
+        console.error(`failed to save archive index to ${CURSOR_PATH}: ${error}`);
+        Deno.exit(1);
+    }
+}
+
 export type LoadedImage = {
     buffer: Buffer;
     aspectRatio: { width: number; height: number };
@@ -16,6 +40,7 @@ export type LoadedLabeledImage = {
     buffer: Buffer;
     aspectRatio: { width: number; height: number };
     meta: PostMetadata;
+    sequence: SequenceMetadata;
 }
 
 export type PostMetadata = {
@@ -23,6 +48,12 @@ export type PostMetadata = {
     volumeNumber: number;
     pageNumber: number;
 };
+
+export type SequenceMetadata = {
+    isLastPageInVolume: boolean;
+    isLastVolumeInSeries: boolean;
+    isLastSeries: boolean;
+}
 
 export function generateAltText(meta: PostMetadata): string {
     return `volume ${meta.volumeNumber}, page ${meta.pageNumber} of ${meta.seriesName}`;
@@ -48,11 +79,16 @@ async function getImageDataAndAspect(filePath: string): Promise<LoadedImage> {
 // New helper to scale images under 976 kilobytes
 const MAX_SIZE = 976 * 1024;
 async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number): Promise<Buffer> {
+    if (buffer.length <= MAX_SIZE) {
+        console.log('image already under size limit, no scaling needed');
+        return buffer;
+    }
+
     let quality = 90;
-    let resizeFactor = 1;
+    let resizeFactor = 0.9;
     let output: Buffer;
+    console.log('scaling image, original size:', buffer.length, 'bytes');
     while (true) {
-        console.log('scaling image...');
         output = await sharp(buffer)
             .resize(Math.floor(width * resizeFactor), Math.floor(height * resizeFactor))
             .jpeg({ quality })
@@ -151,6 +187,10 @@ export async function loadImageAtIndex(index: ArchiveIndex): Promise<LoadedLabel
     if (index.page >= imagePaths.length) {
         throw new Error(`page index ${index.page} out of bounds for volume ${index.volume}`);
     }
+
+    const isLastPageInVolume = index.page === imagePaths.length - 1;
+    const isLastVolumeInSeries = index.volume === volumePaths.length - 1;
+    const isLastSeries = index.series === seriesPaths.length - 1;
     
     const imageName = imagePaths[index.page];
     const { buffer, aspectRatio } = await getImageDataAndAspect(`${volumePath}/${imageName}`);
@@ -166,6 +206,31 @@ export async function loadImageAtIndex(index: ArchiveIndex): Promise<LoadedLabel
             seriesName,
             volumeNumber,
             pageNumber
+        },
+        sequence: {
+            isLastPageInVolume,
+            isLastVolumeInSeries,
+            isLastSeries
         }
     };
+}
+
+export function makeNextIndex(currentIndex: ArchiveIndex, sequence: SequenceMetadata): ArchiveIndex {
+    const nextIndex = { ...currentIndex };
+    if (sequence.isLastPageInVolume) {
+        nextIndex.page = 0;
+        if (sequence.isLastVolumeInSeries) {
+            if (sequence.isLastSeries) 
+                nextIndex.series = 0;
+            else 
+                nextIndex.series += 1;
+
+            nextIndex.volume = 0;
+        } else {
+            nextIndex.volume += 1;
+        }
+    } else {
+        nextIndex.page += 1;
+    }
+    return nextIndex;
 }

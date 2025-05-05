@@ -2,7 +2,7 @@ import { Bot } from "@skyware/bot";
 import { Buffer } from "node:buffer";
 import process from "node:process";
 import sharp from "sharp";
-import { ArchiveIndex, generateAltText, loadImageAtIndex } from "./archive.ts";
+import { ArchiveIndex, generateAltText, loadArchiveIndex, loadImageAtIndex, makeNextIndex, saveArchiveIndex } from "./archive.ts";
 
 const bot = new Bot();
 
@@ -15,18 +15,14 @@ if (!password) {
   throw new Error("BLUESKY_PASSWORD is not set");
 }
 
-const TEST_ARCHIVE_INDEX = {
-  series: 0,
-  volume: 1,
-  page: 5
-} as ArchiveIndex
-
 async function main() {
   await bot.login({ identifier, password });
 
+  const currentIndex = loadArchiveIndex();
+  console.log(`current index: ${JSON.stringify(currentIndex, null, 2)}`);
+
   // Load the image and calculate its aspect ratio
-  //const imagePath = "testimg.jpg";
-  const { buffer, aspectRatio, meta } = await loadImageAtIndex(TEST_ARCHIVE_INDEX);
+  const { buffer, aspectRatio, meta, sequence } = await loadImageAtIndex(currentIndex);
 
   const alt = generateAltText(meta);
 
@@ -42,7 +38,12 @@ async function main() {
     ],
   });
 
-  console.log(post);
+  console.log(`new post URI: ${post.uri}`);
+
+  // Save the updated index
+  const newIndex = makeNextIndex(currentIndex, sequence);
+  console.log(`new index: ${JSON.stringify(newIndex)}`);
+  saveArchiveIndex(newIndex);
 }
 
 main();
