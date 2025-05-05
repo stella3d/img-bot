@@ -84,7 +84,7 @@ async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number)
         return buffer;
     }
 
-    let quality = 85;
+    let quality = 86;
     let resizeFactor = 0.875;
     let output: Buffer;
     console.log('scaling image, original size:', buffer.length, 'bytes');
@@ -101,8 +101,8 @@ async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number)
         if (resizeFactor === 0.875) {
             resizeFactor = 0.8;
         } else if (resizeFactor > 0.2) {
-            resizeFactor -= 0.1;
-            quality = 85; // reset quality when further reducing dimensions
+            resizeFactor -= 0.08;
+            quality = 86; // reset quality when further reducing dimensions
         } else {
             break; // cannot reduce further without compromising too much
         }

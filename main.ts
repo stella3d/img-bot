@@ -1,6 +1,6 @@
 import { Bot } from "@skyware/bot";
 import { Buffer } from "node:buffer";
-import process from "node:process";
+import process, { exit } from "node:process";
 import sharp from "sharp";
 import { ArchiveIndex, generateAltText, loadArchiveIndex, loadImageAtIndex, makeNextIndex, saveArchiveIndex } from "./archive.ts";
 
@@ -44,4 +44,5 @@ async function main() {
   saveArchiveIndex(newIndex);
 }
 
-main();
+await main();
+exit(0);
