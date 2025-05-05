@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@atproto/api": "npm:@atproto/api@^0.15.5",
+    "@skyware/bot": "npm:@skyware/bot@^0.3.11",
+    "@std/assert": "jsr:@std/assert@1",
+    "cron": "npm:cron@^4.3.0",
+    "dotenv": "npm:dotenv@^16.5.0",
+    "sharp": "npm:sharp@^0.34.1"
+  }
+}
