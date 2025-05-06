@@ -76,22 +76,28 @@ async function getImageDataAndAspect(filePath: string): Promise<LoadedImage> {
     return { buffer: scaledBuffer, aspectRatio: { width: metadata.width, height: metadata.height } };
 }
 
-// New helper to scale images under 976 kilobytes
 const MAX_SIZE = 976 * 1024;
+
+const envJpgQuality = Deno.env.get("JPG_QUALITY"); // default to 89
+const jpgQualityStart = envJpgQuality ? parseInt(envJpgQuality, 10) : 89;
+
+const envResizeStep = Deno.env.get("RESIZE_STEP"); // default to 0.04
+const resizeStep = envResizeStep ? parseFloat(envResizeStep) : 0.04;
+
 async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number): Promise<Buffer> {
     if (buffer.length <= MAX_SIZE) {
         console.log(`image size - original: ${buffer.length}`);
         return buffer;
     }
 
-    let quality = 86;
     let resizeFactor = 0.9;
     let output: Buffer;
+    let jpgQuality = jpgQualityStart
 
     while (true) {
         output = await sharp(buffer)
             .resize(Math.floor(width * resizeFactor), Math.floor(height * resizeFactor))
-            .jpeg({ quality })
+            .jpeg({ quality: jpgQuality })
             .toBuffer();
 
         if (output.length <= MAX_SIZE) {
@@ -100,9 +106,9 @@ async function scaleImageIfNeeded(buffer: Buffer, width: number, height: number)
         } 
 
         if (resizeFactor > 0.2) {
-            resizeFactor -= 0.05;
-        } else if (quality > 50){
-            quality -= 4;
+            resizeFactor -= resizeStep;
+        } else if (jpgQuality > 50){
+            jpgQuality -= 4;
         } else {
             console.error('image too large, cannot scale further without losing too much quality');
             break;
