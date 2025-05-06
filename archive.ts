@@ -116,7 +116,7 @@ async function loadSeriesPaths(): Promise<string[]> {
     try {
         for await (const entry of Deno.readDir(ARCHIVE_ROOT)) {
             if (entry.isDirectory) {
-                series.push(`${entry.name}`);
+                series.push(entry.name);
             }
         }
     } catch (error) {
