@@ -25,7 +25,6 @@ async function main() {
 
   const alt = generateAltText(meta);
 
-  // Post the image to Bluesky using the calculated aspect ratio
   const post = await bot.post({
     text: '',
     images: [
