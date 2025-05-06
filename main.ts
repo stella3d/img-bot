@@ -1,4 +1,4 @@
-import { Bot } from "@skyware/bot";
+import { Bot, PostSelfLabels } from "@skyware/bot";
 import { Buffer } from "node:buffer";
 import process, { exit } from "node:process";
 import sharp from "sharp";
@@ -35,6 +35,9 @@ async function main() {
         aspectRatio,
       },
     ],
+    labels: [
+      PostSelfLabels.Porn
+    ]
   });
 
   console.log(`new post URI: ${post.uri}`);
